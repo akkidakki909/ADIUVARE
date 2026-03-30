@@ -21,3 +21,11 @@ class SignalResult:
     detail: dict[str, Any] = field(default_factory=dict)
     exception: Exception | None = None
 
+
+@dataclass
+class AdiuvareEvent:
+    identity: str
+    endpoint: str
+    score: float
+    verdict: str
+    breakdown: dict[str, float]

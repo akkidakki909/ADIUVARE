@@ -19,7 +19,7 @@ def test_pipeline_runs_end_to_end():
     gate, out = asyncio.run(Pipeline(IdentityStore()).process(ctx))
     assert gate.passed is True
     assert out is not None
-    assert out[1] == "flag"
+    assert out.verdict == "flag"
 
 
 def test_pipeline_stops_when_gate_fails():
@@ -55,7 +55,7 @@ def test_pipeline_picks_up_suspicious_user_agent():
     gate, out = asyncio.run(Pipeline(IdentityStore()).process(ctx))
     assert gate.passed is True
     assert out is not None
-    assert out[0] > 0.0
+    assert out.score > 0.0
 
 
 def test_pipeline_marks_missing_user_agent_as_suspicious():
@@ -72,4 +72,41 @@ def test_pipeline_marks_missing_user_agent_as_suspicious():
     gate, out = asyncio.run(Pipeline(IdentityStore()).process(ctx))
     assert gate.passed is True
     assert out is not None
-    assert out[0] > 0.0
+    assert out.score > 0.0
+
+
+def test_pipeline_writes_score_back_to_identity_store():
+    store = IdentityStore()
+    ctx = RequestContext(
+        identity="u1",
+        payload="select * from users",
+        url="/login",
+        method="POST",
+        headers={"User-Agent": "Mozilla/5.0"},
+        ip="127.0.0.1",
+        endpoint="/login",
+    )
+
+    gate, out = asyncio.run(Pipeline(store).process(ctx))
+    assert gate.passed is True
+    assert out is not None
+    assert store.get("u1").score_ewma == out.score
+
+
+def test_pipeline_repeats_pick_up_identity_state():
+    store = IdentityStore()
+    ctx = RequestContext(
+        identity="u1",
+        payload="select * from users",
+        url="/login",
+        method="POST",
+        headers={"User-Agent": "Mozilla/5.0"},
+        ip="127.0.0.1",
+        endpoint="/login",
+    )
+
+    _, first = asyncio.run(Pipeline(store).process(ctx))
+    _, second = asyncio.run(Pipeline(store).process(ctx))
+    assert first is not None
+    assert second is not None
+    assert second.score > first.score

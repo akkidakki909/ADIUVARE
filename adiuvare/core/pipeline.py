@@ -1,8 +1,9 @@
-from ..core.models import SignalResult
+from ..core.models import AdiuvareEvent, SignalResult
 from ..core.gate import run_trackA
 from ..core.scorer import compute_score
 from ..core.verdict import compute_verdict
 from ..signals.behavior import BehaviorSignal
+from ..signals.identity import IdentitySignal
 from ..signals.payload import PayloadSignal
 from ..state.identity_store import IdentityStore
 
@@ -13,6 +14,7 @@ class Pipeline:
         self._soft_signals = soft_signals or [
             PayloadSignal(),
             BehaviorSignal(id_store),
+            IdentitySignal(id_store),
         ]
 
     async def process(self, ctx):
@@ -33,4 +35,14 @@ class Pipeline:
 
         score, breakdown = compute_score(sig_res)
         verdict = compute_verdict(score)
-        return gate, (score, verdict, breakdown)
+        win = self._id_store.get(ctx.identity)
+        win.score_ewma = score
+        self._id_store.update(ctx.identity, win)
+        event = AdiuvareEvent(
+            identity=ctx.identity,
+            endpoint=ctx.endpoint,
+            score=score,
+            verdict=verdict,
+            breakdown=breakdown,
+        )
+        return gate, event
