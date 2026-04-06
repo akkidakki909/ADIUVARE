@@ -1,10 +1,12 @@
 from pathlib import Path
 from typing import Any
+from functools import wraps
 
 from .config import build_snapshot, load_config
 from .core.events import EventHooks
 from .core.models import RequestContext
 from .core.pipeline import Pipeline
+from .policies import BUILTIN_POLICIES
 from .state.identity_store import IdentityStore
 
 
@@ -20,6 +22,8 @@ class Guard:
         self._id_store = IdentityStore()
         self._pipeline = Pipeline(self._id_store, soft_signals=soft_signals)
         self._hooks = EventHooks()
+        self.policies = dict(BUILTIN_POLICIES)
+        self._route_cfg: dict[str, Any] = {}
 
     @property
     def hooks(self) -> EventHooks:
@@ -40,6 +44,51 @@ class Guard:
 
     def handle(self, ctx: RequestContext):
         return self.inspect(ctx)
+
+    def policy(self, name: str, **overrides: Any):
+        pol = self.policies.get(name)
+        if pol is None:
+            raise ValueError(f"unknown policy: {name}")
+        return self.protect(**pol.with_overrides(**overrides).__dict__)
+
+    def protect(
+        self,
+        sensitivity: str = "internal",
+        ai_mode: str = "off",
+        trackB: bool = True,
+        sink_mode: str = "off",
+    ):
+        def deco(fn):
+            cfg = {
+                "sensitivity": sensitivity,
+                "ai_mode": ai_mode,
+                "trackB": trackB,
+                "sink_mode": sink_mode,
+            }
+
+            @wraps(fn)
+            async def wrap(*args, **kwargs):
+                return await fn(*args, **kwargs)
+
+            wrap._adiuvare_cfg = cfg
+            return wrap
+
+        return deco
+
+    def exempt(self):
+        def deco(fn):
+            @wraps(fn)
+            async def wrap(*args, **kwargs):
+                return await fn(*args, **kwargs)
+
+            wrap._adiuvare_exempt = True
+            return wrap
+
+        return deco
+
+    def configure_routes(self, routes: dict[str, Any]):
+        self._route_cfg.update(routes)
+        return self
 
     def use(self, app: Any, framework: str = "fastapi") -> None:
         if framework == "fastapi":
