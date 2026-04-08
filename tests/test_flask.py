@@ -32,3 +32,21 @@ def test_flask_middleware_blocks_when_identity_is_blocked():
     client = app.test_client()
     res = client.get("/ping", headers={"User-Agent": "Mozilla/5.0", "x-user-id": "u1"})
     assert res.status_code == 429
+
+
+def test_guard_from_config_builds_flask_guard(tmp_path):
+    cfg_path = tmp_path / "adiuvare.yaml"
+    cfg_path.write_text("runtime:\n  observe_only: true\n")
+
+    app = Flask(__name__)
+    guard = Guard.from_config(cfg_path)
+    guard.use(app, framework="flask")
+
+    @app.get("/ping")
+    def ping():
+        return jsonify(ok=True)
+
+    client = app.test_client()
+    res = client.get("/ping", headers={"User-Agent": "Mozilla/5.0", "x-user-id": "u2"})
+    assert res.status_code == 200
+    assert guard.config.runtime.observe_only is True

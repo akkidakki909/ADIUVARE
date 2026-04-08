@@ -7,7 +7,7 @@ from starlette.responses import JSONResponse
 from starlette.types import ASGIApp
 
 from ..core.gate import run_trackA
-from ..core.models import RequestContext
+from . import build_http_ctx
 
 
 class AdiuvareMiddleware(BaseHTTPMiddleware):
@@ -17,7 +17,7 @@ class AdiuvareMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         body = await request.body()
-        ctx = RequestContext(
+        ctx = build_http_ctx(
             identity=request.headers.get("x-user-id", request.client.host if request.client else "anon"),
             payload=body.decode() if body else None,
             url=str(request.url.path),
@@ -25,9 +25,8 @@ class AdiuvareMiddleware(BaseHTTPMiddleware):
             headers=dict(request.headers),
             ip=request.client.host if request.client else "127.0.0.1",
             endpoint=request.url.path,
+            snapshot=self._guard._cfg_snap,
         )
-        if ctx.snapshot is None:
-            ctx.snapshot = self._guard._cfg_snap
 
         gate = run_trackA(ctx, self._guard._id_store)
         if not gate.passed:
@@ -44,7 +43,7 @@ class AdiuvareMiddleware(BaseHTTPMiddleware):
         ).start()
         return res
 
-    async def _run_trackB(self, ctx: RequestContext) -> None:
+    async def _run_trackB(self, ctx) -> None:
         event = await self._guard._pipeline.trackB(ctx)
         if event is not None:
             self._guard.hooks.emit_event(event)

@@ -91,3 +91,17 @@ def test_fastapi_returns_hold_for_admin_post():
         headers={"User-Agent": "Mozilla/5.0", "x-user-id": "u3"},
     )
     assert res.status_code == 202
+
+
+def test_guard_auto_attaches_fastapi():
+    app = FastAPI()
+    guard = Guard.auto(app)
+
+    @app.get("/ping")
+    async def ping():
+        return {"ok": True}
+
+    client = TestClient(app)
+    res = client.get("/ping", headers={"User-Agent": "Mozilla/5.0", "x-user-id": "u4"})
+    assert res.status_code == 200
+    assert guard.pipeline is not None

@@ -3,7 +3,7 @@ import json
 
 from werkzeug.wrappers import Request, Response
 
-from ..core.models import RequestContext
+from . import build_http_ctx
 
 
 class AdiuvareMiddleware:
@@ -14,7 +14,7 @@ class AdiuvareMiddleware:
     def __call__(self, environ, start_response):
         req = Request(environ)
         body = req.get_data(cache=True, as_text=True)
-        ctx = RequestContext(
+        ctx = build_http_ctx(
             identity=req.headers.get("x-user-id", req.remote_addr or "anon"),
             payload=body or None,
             url=req.path,

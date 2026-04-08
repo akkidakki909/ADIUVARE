@@ -29,6 +29,46 @@ class Guard:
     def hooks(self) -> EventHooks:
         return self._hooks
 
+    @property
+    def config(self):
+        return self._cfg
+
+    @property
+    def pipeline(self):
+        return self._pipeline
+
+    @classmethod
+    def from_config(
+        cls,
+        config_path: str | Path,
+        preset: str = "balanced",
+        soft_signals: list | None = None,
+    ):
+        return cls(
+            preset=preset,
+            config_path=config_path,
+            soft_signals=soft_signals,
+        )
+
+    @classmethod
+    def auto(
+        cls,
+        app: Any,
+        preset: str = "balanced",
+        config_path: str | Path | None = None,
+        soft_signals: list | None = None,
+    ):
+        guard = cls(
+            preset=preset,
+            config_path=config_path,
+            soft_signals=soft_signals,
+        )
+        if hasattr(app, "wsgi_app"):
+            guard.use(app, framework="flask")
+        else:
+            guard.use(app, framework="fastapi")
+        return guard
+
     async def inspect(self, ctx: RequestContext):
         if ctx.snapshot is None:
             ctx.snapshot = self._cfg_snap
