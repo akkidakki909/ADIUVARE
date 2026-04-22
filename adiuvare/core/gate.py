@@ -1,9 +1,12 @@
 from dataclasses import dataclass
 
+from limits import parse
+
 from ..core.models import RequestContext
 from ..state.identity_store import IdentityStore
 
 trackA_limit = "200/minute"
+_trackA_obj = parse(trackA_limit)
 _wl = None
 _hard_sigs = []
 
@@ -20,6 +23,10 @@ def configure_trackA(*, wl=None, hard_sigs=None) -> None:
     global _wl, _hard_sigs
     _wl = wl
     _hard_sigs = list(hard_sigs or [])
+
+
+def trackA_cap() -> int:
+    return int(getattr(_trackA_obj, "amount", 200))
 
 
 def run_trackA(ctx: RequestContext, id_store: IdentityStore) -> GateResult:
@@ -71,7 +78,7 @@ def run_trackA(ctx: RequestContext, id_store: IdentityStore) -> GateResult:
         )
 
     seen = id_store.bump(ctx.identity)
-    if seen > 200:
+    if seen > trackA_cap():
         id_store.set_blocked(ctx.identity)
         return GateResult(
             passed=False,

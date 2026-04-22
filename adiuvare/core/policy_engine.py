@@ -30,7 +30,7 @@ def reach_verdict(
     verdict = "allow"
     if payload_risk >= 0.85:
         verdict = "throttle"
-    elif payload_risk >= 0.70:
+    elif payload_risk >= 0.60:
         verdict = "flag"
 
     if score >= block:

@@ -1,5 +1,6 @@
 from ua_parser import user_agent_parser
 
+from ..core.gate import trackA_cap
 from ..core.models import RequestContext, SignalResult
 from ..state.identity_store import IdentityStore
 from .base import SoftSignal
@@ -14,7 +15,7 @@ class BehaviorSignal(SoftSignal):
 
     def score_trackA(self, identity: str) -> float:
         seen = self._id_store.bump(identity)
-        if seen > 25:
+        if seen > max(25, trackA_cap() // 8):
             return 0.55
         return 0.0
 

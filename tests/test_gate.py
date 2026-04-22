@@ -46,6 +46,14 @@ def test_gate_rate_limit_sets_block():
     assert store.is_blocked("u1") is True
 
 
+def test_gate_allows_up_to_limit_boundary():
+    store = IdentityStore()
+    ctx = make_ctx()
+    for _ in range(200):
+        res = run_trackA(ctx, store)
+    assert res.passed is True
+
+
 def test_gate_block_expires():
     store = IdentityStore(block_ttl=1)
     store.set_blocked("u1", 0.01)
