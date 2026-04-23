@@ -1,4 +1,5 @@
 import importlib.util
+from pathlib import Path
 
 import pytest
 
@@ -63,3 +64,66 @@ async def test_monitor_reads_recent_audit_rows(app):
     async with app.run_test() as _pilot:
         table = app.query_one("#monitor-stream")
         assert table.row_count == 1
+
+
+@pytest.mark.asyncio
+async def test_events_filter_reduces_rows(app):
+    app.audit.write(
+        AdiuvareEvent(
+            identity="user:a",
+            endpoint="GET /a",
+            score=0.70,
+            verdict="flag",
+            breakdown={"payload": 0.70},
+        )
+    )
+    app.audit.write(
+        AdiuvareEvent(
+            identity="user:b",
+            endpoint="GET /b",
+            score=0.82,
+            verdict="block",
+            breakdown={"payload": 0.82},
+        )
+    )
+    async with app.run_test() as pilot:
+        await pilot.press("2")
+        field = app.query_one("#events-identity-filter")
+        field.value = "user:a"
+        await pilot.pause()
+        table = app.query_one("#events-table")
+        assert table.row_count == 1
+
+
+@pytest.mark.asyncio
+async def test_config_save_updates_yaml(app):
+    async with app.run_test() as pilot:
+        await pilot.press("3")
+        block = app.query_one("#cfg-block")
+        block.value = "0.73"
+        ai = app.query_one("#cfg-ai")
+        ai.value = "assist"
+        await pilot.click("#cfg-save")
+        saved = Path(app.config_path).read_text(encoding="utf-8")
+        assert "0.73" in saved
+        assert "assist" in saved
+
+
+@pytest.mark.asyncio
+async def test_analyst_ask_updates_output(app):
+    app.audit.write(
+        AdiuvareEvent(
+            identity="user:lead",
+            endpoint="POST /login",
+            score=0.76,
+            verdict="flag",
+            breakdown={"behavior": 0.76},
+        )
+    )
+    async with app.run_test() as pilot:
+        await pilot.press("5")
+        ask = app.query_one("#ask-input")
+        ask.focus()
+        await pilot.press("w", "h", "o", "enter")
+        output = str(app.query_one("#ask-output").content)
+        assert "lead identity: user:lead" in output

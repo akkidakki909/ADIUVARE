@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
@@ -7,20 +8,15 @@ from textual.widgets import Button, ContentSwitcher, Static
 
 from ..config.loader import load_config
 from ..state.audit_log import AuditLog
+from ..config.editor import merge_sections
+from ..config.watcher import ConfigWatcher
+from .screens.analyst import AnalystScreen
+from .screens.audit import AuditScreen
+from .screens.config import ConfigScreen
+from .screens.events import EventsScreen
 from .screens.monitor import MonitorScreen
+from .screens.signals import SignalsScreen
 from .workspace import WorkspaceView
-
-
-class PlaceholderView(WorkspaceView):
-    def __init__(self, name: str, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self._name = name
-
-    def compose(self) -> ComposeResult:
-        yield Static(f"{self._name} is still pretty thin right now.", id="placeholder-copy")
-
-    def footer_status(self) -> str:
-        return f"{self._name.lower()} is a placeholder for now"
 
 
 class AdiuvareApp(App[None]):
@@ -44,6 +40,8 @@ class AdiuvareApp(App[None]):
         self.config = load_config(config_path)
         self.audit = AuditLog(self.config.runtime.audit_db_path)
         self._view = "monitor"
+        self._footer_note = "runtime shell"
+        self._watcher = ConfigWatcher(config_path) if config_path else None
 
     def compose(self) -> ComposeResult:
         with Vertical(id="app-shell"):
@@ -58,17 +56,18 @@ class AdiuvareApp(App[None]):
                     yield Button("6 Audit", id="tab-audit", classes="tab-btn")
             with ContentSwitcher(initial="monitor-view", id="body-switcher"):
                 yield MonitorScreen(id="monitor-view")
-                yield PlaceholderView("Events", id="events-view")
-                yield PlaceholderView("Config", id="config-view")
-                yield PlaceholderView("Signals", id="signals-view")
-                yield PlaceholderView("AI", id="analyst-view")
-                yield PlaceholderView("Audit", id="audit-view")
+                yield EventsScreen(id="events-view")
+                yield ConfigScreen(id="config-view")
+                yield SignalsScreen(id="signals-view")
+                yield AnalystScreen(id="analyst-view")
+                yield AuditScreen(id="audit-view")
             with Horizontal(id="app-footer"):
                 yield Static("", id="footer-shortcuts")
                 yield Static("", id="footer-status")
 
     def on_mount(self) -> None:
         self._sync_view()
+        self.set_interval(1.0, self._tick)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id or ""
@@ -84,14 +83,40 @@ class AdiuvareApp(App[None]):
         page.refresh_view()
         self._sync_footer(page)
 
+    def set_footer_status(self, text: str) -> None:
+        self._footer_note = text
+        self._sync_footer(self._active_page())
+
     def runtime_snapshot(self) -> dict:
         return {
             "ai_mode": self.config.ai.mode,
             "observe_only": self.config.runtime.observe_only,
-            "recent_events": 0,
+            "recent_events": len(self.audit.recent(limit=20)),
             "whitelist_size": 0,
             "state_db": self.config.runtime.state_db_path,
         }
+
+    def recent_rows(self, limit: int = 40) -> list[dict]:
+        return self.audit.recent(limit=limit)
+
+    def recent_by_identity(self, identity: str, limit: int = 40) -> list[dict]:
+        return self.audit.by_identity(identity, limit=limit)
+
+    def save_config(self, changes: dict) -> None:
+        path = Path(self.config_path) if self.config_path else Path("adiuvare.yaml")
+        merge_sections(path, changes)
+        self.config = load_config(path)
+        self._watcher = ConfigWatcher(path)
+        self.audit.write_patch("patch_config", changes)
+
+    def mark_note(self, identity: str, note: str) -> None:
+        self.audit.write_patch("unblock_note", {"identity": identity, "note": note})
+
+    def whitelist_identity(self, identity: str) -> None:
+        self.audit.write_patch("unblock_whitelist", {"identity": identity})
+
+    def confirm_identity(self, identity: str) -> None:
+        self.audit.write_patch("confirm_block", {"identity": identity})
 
     def _sync_view(self) -> None:
         self.query_one("#body-switcher", ContentSwitcher).current = f"{self._view}-view"
@@ -105,9 +130,17 @@ class AdiuvareApp(App[None]):
         self._sync_footer(page)
 
     def _sync_footer(self, page: WorkspaceView) -> None:
-        self.query_one("#footer-shortcuts", Static).update(page.shortcut_summary())
-        self.query_one("#footer-status", Static).update(page.footer_status())
+        self.query_one("#footer-shortcuts", Static).update(Text(page.shortcut_summary()))
+        status = page.footer_status()
+        if self._footer_note and self._footer_note != "runtime shell":
+            status = f"{status} | {self._footer_note}"
+        self.query_one("#footer-status", Static).update(Text(status))
 
     def _active_page(self) -> WorkspaceView:
         return self.query_one(f"#{self._view}-view", WorkspaceView)
 
+    def _tick(self) -> None:
+        if self._watcher and self._watcher.check():
+            self.config = load_config(self._watcher.path)
+            self._active_page().refresh_view()
+            self.set_footer_status("config changed on disk")
