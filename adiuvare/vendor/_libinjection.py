@@ -17,6 +17,19 @@ _lib = None
 _bound = False
 
 
+def _src_dir() -> Path:
+    return Path(__file__).with_name("libinjection_src")
+
+
+def _required_sources() -> tuple[Path, ...]:
+    src = _src_dir()
+    return (
+        src / "libinjection_sqli.c",
+        src / "libinjection_html5.c",
+        src / "libinjection_xss.c",
+    )
+
+
 def _lib_name() -> str:
     if platform.system() == "Windows":
         return "libinjection.dll"
@@ -27,6 +40,17 @@ def _lib_name() -> str:
 
 def _lib_path() -> Path:
     return Path(__file__).with_name(_lib_name())
+
+
+def source_ready() -> bool:
+    return all(path.exists() for path in _required_sources())
+
+
+def build_hint() -> str:
+    return (
+        "Compile libinjection with scripts/build_libinjection.sh "
+        "(or python scripts/build_libinjection.py on Windows)."
+    )
 
 
 def _bind(lib) -> None:
@@ -115,6 +139,8 @@ def _bool_taut_hit(text: str) -> bool:
     if "' or " in low and "'='" in low:
         return True
     if '" or ' in low and '"="' in low:
+        return True
+    if re.search(r"""(?i)\bor\b\s+\d+\s*=\s*\d+\b""", low):
         return True
     return False
 
