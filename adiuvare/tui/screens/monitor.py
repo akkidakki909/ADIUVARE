@@ -10,7 +10,7 @@ from ..workspace import PALETTE, WorkspaceView
 
 
 class MonitorScreen(WorkspaceView):
-    shortcut_hints = "[1-6] tabs  [up/down] rows  [r] refresh  [q] quit"
+    shortcut_hints = "[1-5] tabs  [up/down] rows  [r] refresh  [q] quit"
     primary_id = "monitor-stream"
 
     def compose(self) -> ComposeResult:

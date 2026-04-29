@@ -11,7 +11,7 @@ from ..workspace import WorkspaceView
 
 
 class ConfigScreen(WorkspaceView):
-    shortcut_hints = "[1-6] tabs  [s] save  [r] reset  [t] observe"
+    shortcut_hints = "[1-5] tabs  [s] save  [r] reset  [t] observe"
     primary_id = "cfg-block"
 
     def __init__(self, *args, **kwargs) -> None:

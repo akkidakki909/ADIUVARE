@@ -12,7 +12,6 @@ from ..state.audit_log import AuditLog
 from ..state.event_stream import EventStreamClient
 from ..config.editor import merge_sections
 from ..config.watcher import ConfigWatcher
-from .screens.analyst import AnalystScreen
 from .screens.audit import AuditScreen
 from .screens.config import ConfigScreen
 from .screens.events import EventsScreen
@@ -28,8 +27,7 @@ class AdiuvareApp(App[None]):
         Binding("2", "switch_view('events')", show=False),
         Binding("3", "switch_view('config')", show=False),
         Binding("4", "switch_view('signals')", show=False),
-        Binding("5", "switch_view('analyst')", show=False),
-        Binding("6", "switch_view('audit')", show=False),
+        Binding("5", "switch_view('audit')", show=False),
         Binding("q", "quit", show=False),
         Binding("r", "refresh_view", show=False),
     ]
@@ -58,14 +56,12 @@ class AdiuvareApp(App[None]):
                     yield Button("2 Events", id="tab-events", classes="tab-btn")
                     yield Button("3 Config", id="tab-config", classes="tab-btn")
                     yield Button("4 Signals", id="tab-signals", classes="tab-btn")
-                    yield Button("5 AI", id="tab-analyst", classes="tab-btn")
-                    yield Button("6 Audit", id="tab-audit", classes="tab-btn")
+                    yield Button("5 Audit", id="tab-audit", classes="tab-btn")
             with ContentSwitcher(initial="monitor-view", id="body-switcher"):
                 yield MonitorScreen(id="monitor-view")
                 yield EventsScreen(id="events-view")
                 yield ConfigScreen(id="config-view")
                 yield SignalsScreen(id="signals-view")
-                yield AnalystScreen(id="analyst-view")
                 yield AuditScreen(id="audit-view")
             with Horizontal(id="app-footer"):
                 yield Static("", id="footer-shortcuts")
@@ -166,7 +162,7 @@ class AdiuvareApp(App[None]):
 
     def _sync_view(self) -> None:
         self.query_one("#body-switcher", ContentSwitcher).current = f"{self._view}-view"
-        for name in ("monitor", "events", "config", "signals", "analyst", "audit"):
+        for name in ("monitor", "events", "config", "signals", "audit"):
             button = self.query_one(f"#tab-{name}", Button)
             button.remove_class("-active")
             if name == self._view:

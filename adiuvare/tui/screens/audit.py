@@ -11,7 +11,7 @@ from ..workspace import WorkspaceView
 
 
 class AuditScreen(WorkspaceView):
-    shortcut_hints = "[1-6] tabs  [/] filter  [e] export  [r] refresh"
+    shortcut_hints = "[1-5] tabs  [/] filter  [e] export  [r] refresh"
     primary_id = "audit-table"
     search_id = "audit-identity-filter"
 

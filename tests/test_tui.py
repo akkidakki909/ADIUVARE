@@ -221,29 +221,9 @@ async def test_connected_config_save_sends_runtime_patch(connected_app):
 
 
 @pytest.mark.asyncio
-async def test_analyst_ask_updates_output(app):
-    app.audit.write(
-        AdiuvareEvent(
-            identity="user:lead",
-            endpoint="POST /login",
-            score=0.76,
-            verdict="flag",
-            breakdown={"behavior": 0.76},
-        )
-    )
-    async with app.run_test() as pilot:
-        await pilot.press("5")
-        ask = app.query_one("#ask-input")
-        ask.focus()
-        await pilot.press("w", "h", "o", "enter")
-        output = str(app.query_one("#ask-output").content)
-        assert "lead identity: user:lead" in output
-
-
-@pytest.mark.asyncio
 async def test_slash_focuses_audit_filter(app):
     async with app.run_test() as pilot:
-        await pilot.press("6")
+        await pilot.press("5")
         await pilot.press("/")
         assert app.focused is app.query_one("#audit-identity-filter")
 

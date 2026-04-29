@@ -9,7 +9,7 @@ from ..workspace import WorkspaceView
 
 
 class EventsScreen(WorkspaceView):
-    shortcut_hints = "[1-6] tabs  [/] filter  [c] confirm  [u] whitelist  [n] note"
+    shortcut_hints = "[1-5] tabs  [/] filter  [c] confirm  [u] whitelist  [n] note"
     primary_id = "events-table"
     search_id = "events-identity-filter"
 

@@ -22,7 +22,7 @@ class WorkspaceView(Container):
     }
     """
 
-    shortcut_hints = "[1-6] tabs  [q] quit"
+    shortcut_hints = "[1-5] tabs  [q] quit"
     primary_id: str | None = None
     search_id: str | None = None
 

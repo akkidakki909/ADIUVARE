@@ -9,7 +9,7 @@ from ..workspace import WorkspaceView
 
 
 class SignalsScreen(WorkspaceView):
-    shortcut_hints = "[1-6] tabs  [up/down] rows  [r] refresh"
+    shortcut_hints = "[1-5] tabs  [up/down] rows  [r] refresh"
     primary_id = "signals-table"
 
     def compose(self) -> ComposeResult:
