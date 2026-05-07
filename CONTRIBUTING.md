@@ -59,16 +59,22 @@ Install the package in editable mode:
 python -m pip install -e .
 ```
 
+If you want the normal contributor setup with the test stack:
+
+```bash
+python -m pip install -e ".[dev]"
+```
+
 If you are working on the TUI:
 
 ```bash
-python -m pip install -e ".[tui]"
+python -m pip install -e ".[dev,tui]"
 ```
 
 If you need Redis-backed runtime work too:
 
 ```bash
-python -m pip install -e ".[tui,redis]"
+python -m pip install -e ".[dev,tui,redis]"
 ```
 
 Run the test suite before you start making assumptions about the environment:

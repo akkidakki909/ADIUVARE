@@ -11,7 +11,8 @@ whether you want just the core library, the TUI, or the Redis backend too.
 | core + TUI | `pip install "adiuvare[tui]"` |
 | core + Redis | `pip install "adiuvare[redis]"` |
 | editable local dev | `pip install -e .` |
-| editable dev with extras | `pip install -e ".[tui,redis]"` |
+| editable dev test stack | `pip install -e ".[dev]"` |
+| editable dev with extras | `pip install -e ".[dev,tui,redis]"` |
 
 ## Verify the install
 
@@ -90,13 +91,13 @@ runtime:
 Use an editable install when you are changing the library itself.
 
 ```bash
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 Or with the common extras:
 
 ```bash
-pip install -e ".[tui,redis]"
+pip install -e ".[dev,tui,redis]"
 ```
 
 That is the smoothest setup for local development, tests, and doc work.
