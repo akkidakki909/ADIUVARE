@@ -16,6 +16,16 @@ breakdown:
 You can read that as: the content carried most of the risk, behavior added a
 little pressure, and the identity already had some history.
 
+## How signals split across tracks
+
+Before getting into each family, it helps to know where they run.
+
+trackA runs hard checks first- fast,synchronous,binary.If one fires,the request is blocked and scoring never starts.trackB runs after that .It collects scores from all five families and combines them into final number.
+
+The five built-in families all live in trackB.None of them stop a request on their own; they contribute to the aggregated score that does.
+
+When you add a custom signal , this is the same choice you face: a check that should block unconditionally goes in trackA as a HardSignal, a check that should raise suspicion goes in trackB as a SoftSignal. See [View documentation](extending/custom-signals.md) for the full decision guide.
+
 ## Payload
 
 `payload` is the main content-focused signal family. It carries the most weight
