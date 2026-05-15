@@ -154,6 +154,16 @@ pip install "adiuvare[redis]"
 Try the local build script first. If that still fails, the runtime will stay up
 on the Python fallback path.
 
+### Requests always show "allow"
+
+Open adiuvare.yaml :
+
+  runtime:
+  observe_only: true
+  
+  Here change 
+  observe_only: true  to observe_only: false
+ 
 ## Related
 
 - [Quickstart](quickstart.md)
