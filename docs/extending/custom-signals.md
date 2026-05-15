@@ -41,6 +41,27 @@ sqlmap_ua
 The request still passed `trackA`, but the scored event kept your custom reason
 for later review.
 
+## Hard or soft — decide first
+
+The practical boundary:
+
+- **Does a match mean the request should never proceed?** Use `HardSignal`. It runs in `trackA`, stops the pipeline immediately, and produces no scored event.
+- **Does a match raise suspicion without being conclusive on its own?** Use `SoftSignal`. It runs in `trackB`, contributes to the aggregated score, and lets the threshold configuration decide what happens next.
+
+A few questions that usually settle it:
+
+| Question | Hard | Soft |
+|---|---|---|
+| Is the answer yes/no with no meaningful grey area? | ✓ | |
+| Should one match block regardless of everything else? | ✓ | |
+| Does the check need request history or a counter? | | ✓ |
+| Should the result combine with other signals? | | ✓ |
+| Is the check deterministic and free of I/O? | ✓ | |
+
+If you find yourself wanting to return `True` from a hard signal only when a count or score exceeds some value, that logic belongs in a soft signal instead.
+
+Hard signals run on every request before scoring starts. Keep `check()` fast — a slow hard signal adds latency to clean traffic too, not just the requests it blocks.
+
 ## SoftSignal
 
 Use `SoftSignal` when you want to add risk without forcing a block. Good uses
@@ -193,6 +214,38 @@ BadHardSignal.check() must stay sync in track a
 > Hard signals run in `trackA`. Keep them synchronous and deterministic.
 
 ## Registering signals
+
+## Verifying a signal before opening a PR
+
+Unit tests on `extract()` or `check()` in isolation confirm the logic but not the pipeline behaviour. Run at least one check through the real guard path before pushing.
+
+For a soft signal:
+
+```python
+gate, event = guard.check_sync(
+    "test:dev",
+    context={"path": "/search", "method": "GET", "headers": {"user-agent": "sqlmap/1.8"}},
+)
+
+# signal should have fired and contributed to the score
+assert event.detail["signal_reasons"]["header_hint"] == "sqlmap_ua"
+```
+
+For a hard signal:
+
+```python
+gate, event = guard.check_sync(
+    "test:dev",
+    context={"path": "/_internal/jobs", "endpoint": "/_internal/jobs", "method": "GET"},
+)
+
+# pipeline should have stopped before scoring
+assert not gate.passed
+assert gate.block_reason == "private_path"
+assert event is None
+```
+
+Also check the quiet path — a request that should not trigger the signal should pass through without changing the verdict.
 
 ### Guard.from_config()
 
